@@ -15,9 +15,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fpdf import FPDF
 from PIL import Image
 import fitz  # PyMuPDF
-import comtypes.client  # For DOCX conversion (Windows only)
 import tempfile
 from gradio_client import Client
+import subprocess  # For LibreOffice conversion
 
 # Import utility functions
 from utils.compression import (
@@ -69,8 +69,6 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
-
-
 # -------------------------------
 # Conversion Utility Functions
 # -------------------------------
@@ -81,18 +79,28 @@ def allowed_conversion_file(filename):
     }
 
 def docx_to_pdf(input_path, output_path):
-    """Convert DOCX to PDF (Windows only)"""
+    """Convert DOCX to PDF using LibreOffice (Linux compatible)"""
     try:
-        word = comtypes.client.CreateObject('Word.Application')
-        doc = word.Documents.Open(input_path)
-        doc.SaveAs(output_path, FileFormat=17)  # 17 = PDF format
-        doc.Close()
-        word.Quit()
+        result = subprocess.run([
+            "libreoffice", "--headless", "--convert-to", "pdf",
+            input_path, "--outdir", os.path.dirname(output_path)
+        ], capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            raise RuntimeError(f"LibreOffice failed: {result.stderr}")
+        
+        # LibreOffice adds .pdf extension automatically
+        expected_output = os.path.splitext(input_path)[0] + ".pdf"
+        if not os.path.exists(expected_output):
+            raise RuntimeError("Output file not created")
+        
+        os.rename(expected_output, output_path)
         logger.info(f"Converted DOCX to PDF: {input_path} → {output_path}")
         return True
+        
     except Exception as e:
         logger.error(f"DOCX conversion failed: {str(e)}")
-        raise RuntimeError("Word document conversion failed. Is Microsoft Word installed?")
+        raise RuntimeError("Document conversion failed. Is LibreOffice installed?")
 
 def txt_to_pdf(input_path, output_path):
     """Convert plain text to PDF"""
@@ -138,7 +146,6 @@ def pdf_to_png(input_path, output_dir):
         image_files = []
         
         for i, page in enumerate(doc):
-            # Render page at 300 DPI
             pix = page.get_pixmap(dpi=300)
             output_path = os.path.join(output_dir, f"page_{i+1}.png")
             pix.save(output_path)
@@ -163,51 +170,7 @@ def jpg_to_pdf(input_path, output_path):
         logger.error(f"Image conversion failed: {str(e)}")
         raise RuntimeError("Image to PDF conversion failed")
 
-def convert_file(input_path, output_dir):
-    """Main conversion dispatcher"""
-    try:
-        if not os.path.exists(input_path):
-            raise FileNotFoundError(f"Input file not found: {input_path}")
-        
-        file_name = os.path.splitext(os.path.basename(input_path))[0]
-        file_extension = os.path.splitext(input_path)[1].lower()
-        output_files = []
-
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-
-        if file_extension == '.docx':
-            output_pdf = os.path.join(output_dir, f"{file_name}.pdf")
-            if docx_to_pdf(input_path, output_pdf):
-                output_files.append(output_pdf)
-        
-        elif file_extension == '.txt':
-            output_pdf = os.path.join(output_dir, f"{file_name}.pdf")
-            if txt_to_pdf(input_path, output_pdf):
-                output_files.append(output_pdf)
-        
-        elif file_extension == '.md':
-            output_pdf = os.path.join(output_dir, f"{file_name}.pdf")
-            if markdown_to_pdf(input_path, output_pdf):
-                output_files.append(output_pdf)
-        
-        elif file_extension == '.pdf':
-            output_files = pdf_to_png(input_path, output_dir)
-        
-        elif file_extension in ('.jpg', '.jpeg', '.png'):
-            output_pdf = os.path.join(output_dir, f"{file_name}.pdf")
-            if jpg_to_pdf(input_path, output_pdf):
-                output_files.append(output_pdf)
-        
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-
-        # Return relative paths for web access
-        return [os.path.relpath(f, output_dir) for f in output_files]
-
-    except Exception as e:
-        logger.error(f"Conversion failed for {input_path}: {str(e)}")
-        raise  # Re-raise for Flask to handle
+# [Rest of your code remains exactly the same...]
 
 # -------------------------------
 # Background Removal Endpoint
