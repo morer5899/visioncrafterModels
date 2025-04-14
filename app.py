@@ -170,7 +170,56 @@ def jpg_to_pdf(input_path, output_path):
         logger.error(f"Image conversion failed: {str(e)}")
         raise RuntimeError("Image to PDF conversion failed")
 
-# [Rest of your code remains exactly the same...]
+def convert_file(input_path, output_dir):
+    """Main conversion function that handles all supported conversions"""
+    try:
+        # Get file extension
+        ext = input_path.lower().split('.')[-1]
+        
+        # Create output filename (same name but with new extension)
+        input_basename = os.path.basename(input_path)
+        base_name = os.path.splitext(input_basename)[0]
+        
+        # Determine conversion type based on request or file extension
+        output_files = []
+        
+        if ext in ['jpg', 'jpeg', 'png', 'webp']:
+            # Image to PDF conversion
+            output_path = os.path.join(output_dir, f"{base_name}.pdf")
+            if jpg_to_pdf(input_path, output_path):
+                output_files.append(os.path.basename(output_path))
+        
+        elif ext == 'pdf':
+            # PDF to images conversion
+            image_files = pdf_to_png(input_path, output_dir)
+            output_files.extend(image_files)
+            
+        elif ext == 'docx':
+            # DOCX to PDF conversion
+            output_path = os.path.join(output_dir, f"{base_name}.pdf")
+            if docx_to_pdf(input_path, output_path):
+                output_files.append(os.path.basename(output_path))
+                
+        elif ext == 'txt':
+            # TXT to PDF conversion
+            output_path = os.path.join(output_dir, f"{base_name}.pdf")
+            if txt_to_pdf(input_path, output_path):
+                output_files.append(os.path.basename(output_path))
+                
+        elif ext == 'md':
+            # Markdown to PDF conversion
+            output_path = os.path.join(output_dir, f"{base_name}.pdf")
+            if markdown_to_pdf(input_path, output_path):
+                output_files.append(os.path.basename(output_path))
+                
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
+            
+        return output_files
+        
+    except Exception as e:
+        logger.error(f"Conversion failed: {str(e)}")
+        raise
 
 # -------------------------------
 # Background Removal Endpoint
