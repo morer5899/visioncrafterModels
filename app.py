@@ -36,7 +36,7 @@ from utils.recoloring import hex_to_hsv
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173", "http://localhost:5175"], supports_credentials=True)
+CORS(app, origins=["https://visioncrafter.vercel.app","http://localhost:5173", "http://localhost:5175"], supports_credentials=True)
 
 # Configuration - using paths relative to the app folder
 app.config['BASE_DIR'] = os.path.dirname(os.path.abspath(__file__))
