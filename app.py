@@ -394,7 +394,7 @@ def compress():
             quality = max(1, min(100, compression_level))
             compress_image(upload_path, compressed_path, quality)
         elif file_type == 'video':
-            crf = max(0, min(51, 51 - (compression_level * 0.51))
+            crf = max(0, min(51, 51 - (compression_level * 0.51)))
             compress_video(upload_path, compressed_path, crf)
         elif file_type == 'folder':
             compress_zip(upload_path, compressed_path)
@@ -694,7 +694,6 @@ if __name__ == '__main__':
     
     # Run initial cleanup
     cleanup_old_files()
-    
     app.run(host='0.0.0.0', port=5000, threaded=True, debug=True)
 # from flask import Flask, request, jsonify, send_file, send_from_directory
 # from flask_cors import CORS
@@ -751,7 +750,7 @@ if __name__ == '__main__':
 # FILE_TRACKER = {}
 
 # # Initialize Gradio client for background removal
-# bg_removal_client = Client("not-lain/background-removal")
+# bg_removal_client = Client("not-lain/background-removal") crf
 
 # # Ensure directories exist within the app folder
 # os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
